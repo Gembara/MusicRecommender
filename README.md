@@ -214,4 +214,5 @@ python add_demo_data.py
 
 - Spotify за надання Web API
 - scikit-learn спільнота за ML алгоритми
-- ASP.NET Core команда за веб фреймворк 
+- ASP.NET Core команда за веб фреймворк #   M u s i c R e c o m m e n d e r  
+ 
