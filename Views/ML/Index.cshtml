@@ -1,0 +1,609 @@
+@{
+    ViewData["Title"] = "ML Рекомендації";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/player.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <style>
+        .ml-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            padding-bottom: 120px; /* Додаємо місце для плеєра */
+        }
+
+        .ml-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .ml-header h1 {
+            color: #1DB954;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .status-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border-left: 4px solid #1DB954;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-online { background-color: #28a745; }
+        .status-offline { background-color: #dc3545; }
+        .status-loading { background-color: #ffc107; animation: pulse 1.5s infinite; }
+
+        @@keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .algorithm-selector {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .algorithm-card {
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 1rem;
+        }
+
+        .algorithm-card:hover {
+            border-color: #1DB954;
+            transform: translateY(-2px);
+        }
+
+        .algorithm-card.selected {
+            border-color: #1DB954;
+            background-color: #f0f9f0;
+        }
+
+        .recommendations-container {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .recommendation-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid #e9ecef;
+            transition: background-color 0.2s ease;
+        }
+
+        .recommendation-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .recommendation-item:last-child {
+            border-bottom: none;
+        }
+
+        .recommendation-info {
+            flex: 1;
+            margin-left: 1rem;
+        }
+
+        .recommendation-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.25rem;
+        }
+
+        .recommendation-artist {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .confidence-score {
+            background: #1DB954;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .play-button {
+            background: #1DB954;
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .play-button:hover {
+            background: #1ed760;
+            transform: scale(1.1);
+        }
+
+        .play-button.playing {
+            background: #ff6b6b;
+        }
+
+        .music-player {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-top: 1rem;
+            border: 1px solid #e9ecef;
+            display: none;
+        }
+
+        .currently-playing {
+            background: #e8f5e8 !important;
+            border-left: 4px solid #1DB954;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1DB954;
+            display: block;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .btn-ml {
+            background: linear-gradient(135deg, #1DB954 0%, #1ed760 100%);
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-ml:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(29, 185, 84, 0.3);
+            color: white;
+        }
+
+        .btn-ml:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border-left: 4px solid #1DB954;
+        }
+
+        .spotify-open-btn {
+            background: #1DB954 !important;
+            border: none !important;
+            color: white !important;
+            text-decoration: none !important;
+            border-radius: 20px !important;
+            font-weight: 500 !important;
+            transition: all 0.3s ease !important;
+        }
+
+        .spotify-open-btn:hover {
+            background: #1ed760 !important;
+            transform: translateY(-1px) !important;
+            color: white !important;
+        }
+
+        .spotify-open-btn i {
+            font-size: 1.2em;
+        }
+    </style>
+}
+
+<div class="ml-container">
+    <div class="ml-header">
+        <h1>🤖 ML Рекомендації</h1>
+        <p class="lead">Персональні рекомендації на основі машинного навчання</p>
+    </div>
+
+    <!-- Статус ML сервісу -->
+    <div class="status-section">
+        <h5>🤖 Статус ML сервісу</h5>
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <div id="mlServiceStatus">
+                    <span class="status-indicator status-loading"></span>Перевіряється...
+                </div>
+                <small class="text-muted">Перевірте, що Python ML сервіс запущений на порту 8000</small>
+            </div>
+            <button class="btn btn-outline-primary btn-sm" onclick="checkMLServiceStatus()" id="refreshStatusBtn">
+                🔄 Оновити статус
+            </button>
+        </div>
+        
+        <div class="mt-3">
+            <button class="btn btn-warning" onclick="trainModels()" id="trainBtn" disabled>
+                🎯 Тренувати моделі
+            </button>
+            <small class="text-muted ms-2">Спочатку натренуйте моделі перед отриманням рекомендацій</small>
+        </div>
+    </div>
+
+    <!-- Статистика даних -->
+    <div class="stats-grid" id="statsGrid" style="display: none;">
+        <div class="stat-card">
+            <span class="stat-number" id="usersCount">-</span>
+            <div class="stat-label">Користувачі</div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number" id="interactionsCount">-</span>
+            <div class="stat-label">Взаємодії</div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number" id="historyCount">-</span>
+            <div class="stat-label">Історія</div>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number" id="featuresCount">-</span>
+            <div class="stat-label">Характеристики треків</div>
+        </div>
+    </div>
+
+    <!-- Вибір алгоритму -->
+    <div class="algorithm-selector">
+        <h5>🎛️ Оберіть алгоритм рекомендацій</h5>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="algorithm-card" data-algorithm="content_based" onclick="selectAlgorithm('content_based')">
+                    <h6>🎵 Content-Based</h6>
+                    <p class="mb-0 small">На основі характеристик музики</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="algorithm-card" data-algorithm="collaborative" onclick="selectAlgorithm('collaborative')">
+                    <h6>👥 Collaborative Filtering</h6>
+                    <p class="mb-0 small">На основі поведінки користувачів</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="algorithm-card selected" data-algorithm="hybrid" onclick="selectAlgorithm('hybrid')">
+                    <h6>🔄 Hybrid</h6>
+                    <p class="mb-0 small">Комбінація обох методів</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-3">
+            <label for="recommendationsCount" class="form-label">Кількість рекомендацій:</label>
+            <select class="form-select" id="recommendationsCount" style="width: auto; display: inline-block;">
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="15">15</option>
+                <option value="20">20</option>
+            </select>
+            <button class="btn btn-ml ms-3" onclick="getMLRecommendations()" id="getRecommendationsBtn">
+                🚀 Отримати рекомендації
+            </button>
+        </div>
+    </div>
+
+    <!-- Результати рекомендацій -->
+    <div class="recommendations-container" id="recommendationsContainer" style="display: none;">
+        <h5 id="recommendationsTitle">🎯 Ваші ML рекомендації</h5>
+        <div id="recommendationsList"></div>
+    </div>
+</div>
+
+<div id="spotifyPlayer"></div>
+
+@section Scripts {
+    <script src="~/js/player.js"></script>
+    <script>
+        let selectedAlgorithm = 'hybrid';
+
+        // Перевірити статус ML сервісу при завантаженні сторінки
+        document.addEventListener('DOMContentLoaded', function() {
+            checkMLServiceStatus();
+            loadMLStats();
+        });
+
+        // Перевірка статусу ML сервісу
+        async function checkMLServiceStatus() {
+            const statusElement = document.getElementById('mlServiceStatus');
+            const refreshButton = document.getElementById('refreshStatusBtn');
+            
+            // Показуємо індикатор завантаження
+            statusElement.innerHTML = '<span class="status-indicator status-loading"></span>Перевіряється...';
+            refreshButton.disabled = true;
+            refreshButton.innerHTML = '🔄 Перевіряється...';
+
+            try {
+                const response = await fetch('/ML/CheckMLServiceStatus');
+                const result = await response.json();
+
+                if (result.success && result.status === 'online') {
+                    statusElement.innerHTML = '<span class="status-indicator status-online"></span>ML сервіс онлайн ✅';
+                    document.getElementById('getRecommendationsBtn').disabled = false;
+                    document.getElementById('trainBtn').disabled = false;
+                } else {
+                    statusElement.innerHTML = '<span class="status-indicator status-offline"></span>ML сервіс недоступний ❌';
+                    document.getElementById('getRecommendationsBtn').disabled = true;
+                    document.getElementById('trainBtn').disabled = true;
+                }
+            } catch (error) {
+                statusElement.innerHTML = '<span class="status-indicator status-offline"></span>Помилка підключення ❌';
+                document.getElementById('getRecommendationsBtn').disabled = true;
+                document.getElementById('trainBtn').disabled = true;
+            } finally {
+                // Відновлюємо кнопку оновлення
+                refreshButton.disabled = false;
+                refreshButton.innerHTML = '🔄 Оновити статус';
+            }
+        }
+
+        // Завантаження статистики
+        async function loadMLStats() {
+            try {
+                const response = await fetch('/ML/GetMLStats');
+                const result = await response.json();
+
+                if (result.success) {
+                    document.getElementById('usersCount').textContent = result.data.Users;
+                    document.getElementById('interactionsCount').textContent = result.data.Interactions;
+                    document.getElementById('historyCount').textContent = result.data.History;
+                    document.getElementById('featuresCount').textContent = result.data.SongFeatures;
+                    document.getElementById('statsGrid').style.display = 'grid';
+                }
+            } catch (error) {
+                console.error('Error loading ML stats:', error);
+            }
+        }
+
+        // Вибір алгоритму
+        function selectAlgorithm(algorithm) {
+            // Очистити попередній вибір
+            document.querySelectorAll('.algorithm-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+
+            // Вибрати новий
+            document.querySelector(`[data-algorithm="${algorithm}"]`).classList.add('selected');
+            selectedAlgorithm = algorithm;
+        }
+
+        // Отримання ML рекомендацій
+        async function getMLRecommendations() {
+            const button = document.getElementById('getRecommendationsBtn');
+            const container = document.getElementById('recommendationsContainer');
+            const list = document.getElementById('recommendationsList');
+
+            button.disabled = true;
+            button.innerHTML = '🔄 Завантаження...';
+
+            try {
+                const requestData = {
+                    Algorithm: selectedAlgorithm,
+                    NumberOfRecommendations: parseInt(document.getElementById('recommendationsCount').value)
+                };
+
+                const response = await fetch('/ML/GetMLRecommendations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                const result = await response.json();
+
+                if (result.success && result.data.recommendations) {
+                    displayRecommendations(result.data.recommendations, result.data.algorithm_used);
+                    container.style.display = 'block';
+                } else {
+                    showNotification(result.message || 'Помилка отримання рекомендацій', 'error');
+                }
+            } catch (error) {
+                console.error('Error getting ML recommendations:', error);
+                showNotification('Помилка підключення до ML сервісу', 'error');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = '🚀 Отримати рекомендації';
+            }
+        }
+
+        // Відображення рекомендацій
+        function displayRecommendations(recommendations, algorithm) {
+            const list = document.getElementById('recommendationsList');
+            const title = document.getElementById('recommendationsTitle');
+            
+            title.textContent = `🎯 Рекомендації (${algorithm || 'Unknown'} алгоритм)`;
+            
+            list.innerHTML = recommendations.map((rec, index) => `
+                <div class="recommendation-item" id="rec-${index}">
+                    <button class="play-button" onclick="playSong('${rec.track_id}', '${rec.title}', '${rec.artist}', ${index})" id="play-btn-${index}">
+                        ▶️
+                    </button>
+                    <div class="recommendation-info">
+                        <div class="recommendation-title">${rec.title || 'Невідомий трек'}</div>
+                        <div class="recommendation-artist">${rec.artist || 'Невідомий виконавець'}</div>
+                    </div>
+                    <div class="confidence-score">
+                        ${rec.confidence_score ? (rec.confidence_score * 100).toFixed(1) + '%' : 'N/A'}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        let currentlyPlaying = null;
+
+        // Програвання пісні
+        function playSong(trackId, title, artist, index) {
+            console.log('Playing song:', trackId, title, artist);
+            
+            const playButton = document.getElementById(`play-btn-${index}`);
+            
+            // Зупиняємо попередній трек
+            if (currentlyPlaying !== null && currentlyPlaying !== index) {
+                document.getElementById(`play-btn-${currentlyPlaying}`).innerHTML = '▶️';
+                document.getElementById(`rec-${currentlyPlaying}`).classList.remove('currently-playing');
+            }
+            
+            // Оновлюємо візуально
+            document.getElementById(`rec-${index}`).classList.add('currently-playing');
+            playButton.innerHTML = '⏸️';
+            currentlyPlaying = index;
+            
+            // Додаємо в історію прослуховування
+            const songData = {
+                title: title || 'Unknown Track',
+                artist: artist || 'Unknown Artist',
+                spotifyTrackId: trackId,
+                imageUrl: `https://i.scdn.co/image/ab67616d0000b273${trackId}`,
+                listenedAt: new Date().toISOString()
+            };
+
+            // Зберігаємо в історію
+            fetch('/api/History/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(songData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    console.warn('Failed to save to history');
+                } else {
+                    console.log('Successfully saved to history');
+                }
+            })
+            .catch(error => {
+                console.error('Error saving to history:', error);
+            });
+            
+            // Спробуємо відкрити Spotify Desktop App або Web Player
+            const spotifyUrl = `https://open.spotify.com/track/${trackId}`;
+            
+            // Показуємо плеєр і повідомлення
+            if (typeof spotifyPlayer !== 'undefined') {
+                // Спочатку спробуємо Spotify плеєр
+                spotifyPlayer.playTrack(
+                    trackId, 
+                    title || 'Unknown Track', 
+                    artist || 'Unknown Artist', 
+                    songData.imageUrl
+                );
+                
+                // Додаємо кнопку "Відкрити в Spotify"
+                setTimeout(() => {
+                    const playerContainer = document.getElementById('spotifyPlayer');
+                    if (playerContainer && !playerContainer.querySelector('.spotify-open-btn')) {
+                        const openButton = document.createElement('a');
+                        openButton.href = spotifyUrl;
+                        openButton.target = '_blank';
+                        openButton.className = 'spotify-open-btn btn btn-success ms-3';
+                        openButton.innerHTML = '<i class="fab fa-spotify"></i> Відкрити в Spotify';
+                        openButton.style.cssText = 'display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; margin-left: 1rem; white-space: nowrap;';
+                        
+                        const playerInfo = playerContainer.querySelector('.player-info');
+                        if (playerInfo) {
+                            playerInfo.appendChild(openButton);
+                        }
+                    }
+                }, 500);
+                
+            } else {
+                // Якщо плеєр недоступний, відкриваємо Spotify напряму
+                window.open(spotifyUrl, '_blank');
+                showNotification(`Відкриваю "${title}" в Spotify`, 'info');
+            }
+        }
+
+        // Тренування моделей
+        async function trainModels() {
+            const button = document.getElementById('trainBtn');
+            
+            if (!confirm('Ви впевнені, що хочете розпочати тренування ML моделей? Це може зайняти деякий час.')) {
+                return;
+            }
+
+            button.disabled = true;
+            button.innerHTML = '🔄 Тренування...';
+
+            try {
+                const response = await fetch('/ML/TrainModels', {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showNotification('Тренування ML моделей завершено успішно!', 'success');
+                } else {
+                    showNotification(result.message || 'Помилка тренування', 'error');
+                }
+            } catch (error) {
+                console.error('Error training models:', error);
+                showNotification('Помилка тренування ML моделей', 'error');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = '🎯 Тренувати моделі';
+            }
+        }
+
+        // Показати повідомлення
+        function showNotification(message, type = 'info') {
+            // Простий alert для початку, можна покращити пізніше
+            alert(message);
+        }
+    </script>
+} 

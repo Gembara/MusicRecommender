@@ -1,0 +1,263 @@
+@model List<MusicRecommender.Models.Song>
+@{
+    ViewData["Title"] = "Рекомендації";
+    var artistName = ViewBag.ArtistName;
+}
+
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">🎯 Рекомендації</h2>
+            @if (!string.IsNullOrEmpty(artistName))
+            {
+                <p class="text-muted mb-0">Схожі на @artistName</p>
+            }
+        </div>
+        <a href="@Url.Action("Index", "Home")" class="btn btn-outline-primary">
+            🔍 Новий пошук
+        </a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            <h4 class="alert-heading">Немає рекомендацій</h4>
+            <p>
+                На жаль, ми не змогли знайти рекомендації. Спробуйте:
+            </p>
+            <ul class="mb-0">
+                <li>Пошукати іншого виконавця</li>
+                <li>Перевірити правильність написання імені</li>
+                <li>Вибрати більш популярного виконавця</li>
+            </ul>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var song in Model)
+            {
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100 song-card" data-track-id="@song.SpotifyTrackId">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                @if (!string.IsNullOrEmpty(song.ImageUrl))
+                                {
+                                    <img src="@song.ImageUrl" alt="@song.Title" class="song-image me-3">
+                                }
+                                <div>
+                                    <h5 class="card-title text-truncate mb-1" title="@song.Title">@song.Title</h5>
+                                    <p class="card-text text-muted mb-0">@song.Artist</p>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <button class="btn btn-play" onclick="playTrack('@song.SpotifyTrackId', this)">
+                                    <svg width="16" height="16" viewBox="0 0 16 16">
+                                        <path fill="currentColor" d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                        <path fill="currentColor" d="M6.271 5.055a.5.5 0 0 1 .52.038l3.5 2.5a.5.5 0 0 1 0 .814l-3.5 2.5A.5.5 0 0 1 6 10.5v-5a.5.5 0 0 1 .271-.445z"/>
+                                    </svg>
+                                    Слухати
+                                </button>
+                                <button class="btn btn-favorite" title="Додати в улюблене" data-favorite-track="@song.SpotifyTrackId">
+                                    <svg width="16" height="16" viewBox="0 0 16 16">
+                                        <path fill="currentColor" d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@section Styles {
+    <style>
+        .song-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            border: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .song-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .song-card.playing {
+            border-left: 4px solid #1DB954;
+            background-color: #1db95410;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .song-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .btn-play {
+            background-color: #1DB954;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-play:hover {
+            background-color: #1ed760;
+            transform: translateY(-1px);
+        }
+
+        .btn-favorite {
+            background: none;
+            border: none;
+            color: #6c757d;
+            padding: 8px;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-favorite:hover {
+            color: #dc3545;
+            background-color: #f8f9fa;
+        }
+
+        .btn-favorite.active {
+            color: #dc3545;
+        }
+
+        .btn-outline-primary {
+            color: #1DB954;
+            border-color: #1DB954;
+        }
+
+        .btn-outline-primary:hover {
+            background-color: #1DB954;
+            border-color: #1DB954;
+            color: white;
+        }
+
+        .alert-info {
+            background-color: #f8f9fa;
+            border-color: #e9ecef;
+            color: #495057;
+        }
+
+        .alert-info h4 {
+            color: #1DB954;
+        }
+
+        .alert-info ul {
+            padding-left: 1.2rem;
+        }
+
+        .alert-info li {
+            margin-bottom: 0.5rem;
+        }
+
+        .text-muted {
+            color: #6c757d !important;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            let currentlyPlaying = null;
+
+            // Ініціалізація стану улюблених
+            document.querySelectorAll('[data-favorite-track]').forEach(button => {
+                checkFavorite(button.dataset.favoriteTrack).then(isFavorite => {
+                    if (isFavorite) {
+                        button.classList.add('active');
+                    }
+                });
+
+                button.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    const trackId = button.dataset.favoriteTrack;
+                    const card = button.closest('.song-card');
+                    const title = card.querySelector('.card-title').textContent;
+                    const artist = card.querySelector('.text-muted').textContent;
+                    const imageUrl = card.querySelector('.song-image')?.src;
+
+                    const isFavorite = button.classList.contains('active');
+                    
+                    if (isFavorite) {
+                        await removeFromFavorites(trackId);
+                        button.classList.remove('active');
+                    } else {
+                        await addToFavorites(trackId, title, artist, imageUrl);
+                        button.classList.add('active');
+                    }
+                });
+            });
+        });
+
+        function playTrack(trackId, button) {
+            const card = button.closest('.song-card');
+            const title = card.querySelector('.card-title').textContent;
+            const artist = card.querySelector('.text-muted').textContent;
+            const imageUrl = card.querySelector('.song-image')?.src;
+
+            // Оновлюємо візуальний стан
+            document.querySelectorAll('.song-card').forEach(c => c.classList.remove('playing'));
+            card.classList.add('playing');
+
+            // Відтворюємо трек
+            spotifyPlayer.playTrack(trackId, title, artist, imageUrl);
+
+            // Зберігаємо в історію
+            const songData = {
+                title: title,
+                artist: artist,
+                spotifyTrackId: trackId,
+                imageUrl: imageUrl,
+                listenedAt: new Date().toISOString()
+            };
+
+            fetch('/api/History/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(songData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to save to history');
+                }
+            })
+            .catch(error => {
+                console.error('Error saving to history:', error);
+                showNotification('Помилка при збереженні в історію', 'error');
+            });
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type === 'error' ? 'danger' : 'success'} position-fixed top-0 end-0 m-3`;
+            notification.style.zIndex = '9999';
+            notification.innerHTML = message;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
+    </script>
+}

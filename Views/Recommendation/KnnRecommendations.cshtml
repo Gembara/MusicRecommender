@@ -1,0 +1,807 @@
+@{
+    ViewData["Title"] = "🎵 Музичний плеєр";
+}
+
+@section Styles {
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            margin: 20px auto;
+            max-width: 1200px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .header-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .search-section {
+            padding: 30px;
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .search-box {
+            position: relative;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 15px 20px 15px 50px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .search-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+            outline: none;
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            font-size: 18px;
+        }
+        
+        .content-area {
+            display: flex;
+            min-height: 600px;
+        }
+        
+        .sidebar {
+            width: 300px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-right: 1px solid #e9ecef;
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 20px;
+        }
+        
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .search-results {
+            display: none;
+        }
+        
+        .track-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: white;
+            border: 1px solid #e9ecef;
+        }
+        
+        .track-item:hover {
+            background: #f8f9fa;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .track-image {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            object-fit: cover;
+            margin-right: 12px;
+        }
+        
+        .track-info {
+            flex: 1;
+        }
+        
+        .track-title {
+            font-weight: 600;
+            color: #333;
+            margin: 0;
+            font-size: 14px;
+        }
+        
+        .track-artist {
+            color: #6c757d;
+            margin: 0;
+            font-size: 12px;
+        }
+        
+        .track-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn-play {
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-play:hover {
+            background: #218838;
+            transform: scale(1.1);
+        }
+        
+        .btn-like {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-like:hover {
+            background: #c82333;
+            transform: scale(1.1);
+        }
+        
+        .btn-like.liked {
+            background: #e74c3c;
+        }
+        
+        .user-stats {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .stat-label {
+            color: #6c757d;
+            font-size: 14px;
+        }
+        
+        .stat-value {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .recommendations-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .welcome-message {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+        
+        .welcome-message h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .genres-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .genre-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .genre-tag {
+            background: #667eea;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .genre-tag:hover {
+            background: #564dc7;
+            transform: translateY(-1px);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+        
+        .current-playing {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #333;
+            color: white;
+            padding: 15px 20px;
+            display: none;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .playing-info {
+            flex: 1;
+        }
+        
+        .playing-title {
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .playing-artist {
+            font-size: 14px;
+            color: #ccc;
+            margin: 0;
+        }
+        
+        .audio-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .volume-control {
+            width: 100px;
+        }
+    </style>
+}
+
+<div class="main-container">
+    <!-- Header -->
+    <div class="header-section">
+        <h1>🎵 Музичний плеєр</h1>
+        <p class="mb-0">Відкрий для себе нову музику та отримуй персональні рекомендації</p>
+    </div>
+
+    <!-- Search Section -->
+    <div class="search-section">
+        <div class="search-box">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" id="search-input" class="search-input" placeholder="Шукай артистів, пісні, альбоми...">
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content-area">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <!-- User Stats -->
+            <div id="user-stats" class="user-stats" style="display: none;">
+                <div class="section-title">📊 Твоя статистика</div>
+                <div id="stats-content">
+                    <!-- Stats will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Popular Genres -->
+            <div class="genres-section">
+                <div class="section-title">🎯 Популярні жанри</div>
+                <div class="genre-tags">
+                    <span class="genre-tag" onclick="searchByGenre('pop')">Pop</span>
+                    <span class="genre-tag" onclick="searchByGenre('rock')">Rock</span>
+                    <span class="genre-tag" onclick="searchByGenre('hip-hop')">Hip-Hop</span>
+                    <span class="genre-tag" onclick="searchByGenre('electronic')">Electronic</span>
+                    <span class="genre-tag" onclick="searchByGenre('r-n-b')">R&B</span>
+                    <span class="genre-tag" onclick="searchByGenre('indie')">Indie</span>
+                    <span class="genre-tag" onclick="searchByGenre('jazz')">Jazz</span>
+                    <span class="genre-tag" onclick="searchByGenre('classical')">Classical</span>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="genres-section">
+                <div class="section-title">⚡ Швидкі дії</div>
+                <button class="btn btn-primary btn-sm w-100 mb-2" onclick="getPersonalizedRecommendations()">
+                    🎵 Мої рекомендації
+                </button>
+                <button class="btn btn-outline-secondary btn-sm w-100" onclick="showTrendingMusic()">
+                    📈 Популярне зараз
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Welcome Message -->
+            <div id="welcome-message" class="welcome-message">
+                <h3>👋 Ласкаво просимо!</h3>
+                <p>Почни з пошуку улюбленої музики або обери жанр зліва.<br>
+                Система вивчить твій смак та буде рекомендувати схожу музику.</p>
+            </div>
+
+            <!-- Search Results -->
+            <div id="search-results" class="search-results">
+                <div class="section-title">🔍 Результати пошуку</div>
+                <div id="search-tracks">
+                    <!-- Search results will appear here -->
+                </div>
+            </div>
+
+            <!-- Recommendations -->
+            <div id="recommendations-section" class="recommendations-section" style="display: none;">
+                <div class="section-title">✨ Рекомендації для тебе</div>
+                <div id="recommendations-tracks">
+                    <!-- Recommendations will appear here -->
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="loading" style="display: none;">
+                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                <p class="mt-2">Завантаження...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Current Playing Bar -->
+<div id="current-playing" class="current-playing">
+    <div class="playing-info">
+        <div class="playing-title" id="playing-title"></div>
+        <div class="playing-artist" id="playing-artist"></div>
+    </div>
+    <div class="audio-controls">
+        <button id="play-pause-btn" class="btn btn-light btn-sm">⏸️</button>
+        <input type="range" id="volume-control" class="volume-control" min="0" max="100" value="70">
+        <button id="close-player" class="btn btn-light btn-sm">✕</button>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+let currentUserId = null;
+let audioPlayer = null;
+let searchTimeout = null;
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    initializeApp();
+    setupSearchListener();
+    checkUserAuth();
+});
+
+async function initializeApp() {
+    console.log('🎵 Initializing Music Player...');
+    
+    // Load user stats if logged in
+    await loadUserStats();
+}
+
+async function checkUserAuth() {
+    try {
+        const response = await fetch('/api/Auth/current');
+        const data = await response.json();
+        
+        if (data.success && data.isLoggedIn) {
+            currentUserId = data.userId;
+            document.getElementById('user-stats').style.display = 'block';
+            await loadUserStats();
+        }
+    } catch (error) {
+        console.error('Error checking auth:', error);
+    }
+}
+
+function setupSearchListener() {
+    const searchInput = document.getElementById('search-input');
+    
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const query = this.value.trim();
+        
+        if (query.length >= 2) {
+            searchTimeout = setTimeout(() => searchMusic(query), 500);
+        } else {
+            hideSearchResults();
+        }
+    });
+    
+    searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            clearTimeout(searchTimeout);
+            const query = this.value.trim();
+            if (query.length >= 2) {
+                searchMusic(query);
+            }
+        }
+    });
+}
+
+async function searchMusic(query) {
+    console.log('🔍 Searching for:', query);
+    showLoading(true);
+    
+    try {
+        const response = await fetch(`/api/Music/search?query=${encodeURIComponent(query)}`);
+        if (!response.ok) {
+            throw new Error('Search failed');
+        }
+        
+        const data = await response.json();
+        if (data.success) {
+            displaySearchResults(data.data.songs || []);
+        } else {
+            throw new Error(data.message || 'Search failed');
+        }
+    } catch (error) {
+        console.error('Search error:', error);
+        showNotification('Помилка пошуку. Спробуйте ще раз.', 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+function searchByGenre(genre) {
+    console.log('🎯 Searching by genre:', genre);
+    document.getElementById('search-input').value = genre;
+    searchMusic(genre);
+}
+
+function displaySearchResults(tracks) {
+    const welcomeMessage = document.getElementById('welcome-message');
+    const searchResults = document.getElementById('search-results');
+    const recommendationsSection = document.getElementById('recommendations-section');
+    const searchTracks = document.getElementById('search-tracks');
+    
+    welcomeMessage.style.display = 'none';
+    recommendationsSection.style.display = 'none';
+    searchResults.style.display = 'block';
+    
+    if (!tracks || tracks.length === 0) {
+        searchTracks.innerHTML = '<p class="text-muted text-center">Нічого не знайдено. Спробуйте інший запит.</p>';
+        return;
+    }
+    
+    searchTracks.innerHTML = tracks.map(track => createTrackElement(track)).join('');
+}
+
+function createTrackElement(track) {
+    const isLiked = false; // TODO: Check if track is liked
+    const hasPreview = track.previewUrl && track.previewUrl !== 'null' && track.previewUrl !== '';
+    
+    return `
+        <div class="track-item" data-track-id="${track.id || track.spotifyTrackId}">
+            <img src="${track.imageUrl || '/images/default-album.svg'}" class="track-image" alt="${track.name || track.title}" onerror="this.src='/images/default-album.svg'">
+            <div class="track-info">
+                <div class="track-title">${track.name || track.title}</div>
+                <div class="track-artist">${track.artistName || track.artist}</div>
+            </div>
+            <div class="track-actions">
+                ${hasPreview ? 
+                    `<button class="btn-play" onclick="playTrack('${track.previewUrl}', '${track.name || track.title}', '${track.artistName || track.artist}', '${track.id || track.spotifyTrackId}')" title="Слухати">
+                        ▶️
+                    </button>` : 
+                    `<button class="btn-play" style="opacity: 0.5; cursor: not-allowed;" title="Превью недоступне">🚫</button>`
+                }
+                <button class="btn-like ${isLiked ? 'liked' : ''}" onclick="toggleLike('${track.id || track.spotifyTrackId}', '${track.name || track.title}', '${track.artistName || track.artist}', '${track.imageUrl || ''}')" title="Додати в улюблені">
+                    ❤️
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+async function playTrack(previewUrl, title, artist, trackId) {
+    console.log('🎵 Playing:', title, 'by', artist);
+    
+    // Record listening interaction
+    if (currentUserId && trackId) {
+        recordInteraction(trackId, 1, 3, 30, false, false); // Played interaction
+    }
+    
+    // Stop current player
+    if (audioPlayer) {
+        audioPlayer.pause();
+        audioPlayer = null;
+    }
+    
+    try {
+        audioPlayer = new Audio(previewUrl);
+        audioPlayer.volume = 0.7;
+        
+        audioPlayer.addEventListener('loadstart', () => {
+            showCurrentPlaying(title, artist);
+        });
+        
+        audioPlayer.addEventListener('error', (e) => {
+            console.error('Audio error:', e);
+            hideCurrentPlaying();
+            showNotification('Помилка відтворення аудіо', 'error');
+        });
+        
+        audioPlayer.addEventListener('ended', () => {
+            hideCurrentPlaying();
+            // Record full listen
+            if (currentUserId && trackId) {
+                recordInteraction(trackId, 1, 4, 30, false, false);
+            }
+        });
+        
+        await audioPlayer.play();
+        
+    } catch (error) {
+        console.error('Play error:', error);
+        showNotification('Не вдалося відтворити трек', 'error');
+    }
+}
+
+async function toggleLike(trackId, title, artist, imageUrl) {
+    if (!currentUserId) {
+        showNotification('Увійдіть щоб додавати треки в улюблені', 'warning');
+        return;
+    }
+    
+    console.log('❤️ Toggling like for:', title);
+    
+    try {
+        // Record like interaction
+        recordInteraction(trackId, 2, 5, 0, false, true);
+        
+        // Add to favorites
+        const response = await fetch('/api/Favorites/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                spotifyTrackId: trackId,
+                title: title,
+                artist: artist,
+                imageUrl: imageUrl
+            })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            showNotification(`❤️ "${title}" додано в улюблені!`, 'success');
+            
+            // Update button state
+            const button = event.target;
+            button.classList.add('liked');
+            
+            // Update stats
+            loadUserStats();
+        } else {
+            showNotification('Помилка додавання в улюблені', 'error');
+        }
+    } catch (error) {
+        console.error('Like error:', error);
+        showNotification('Помилка додавання в улюблені', 'error');
+    }
+}
+
+async function recordInteraction(trackId, interactionType, rating, playDuration, isSkipped, isLiked) {
+    if (!currentUserId) return;
+    
+    try {
+        await fetch('/Recommendation/RecordInteraction', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: currentUserId,
+                trackId: trackId,
+                interactionType: interactionType,
+                rating: rating,
+                playDuration: playDuration,
+                isSkipped: isSkipped,
+                isLiked: isLiked
+            })
+        });
+        
+        console.log('📊 Interaction recorded');
+    } catch (error) {
+        console.error('Error recording interaction:', error);
+    }
+}
+
+async function getPersonalizedRecommendations() {
+    if (!currentUserId) {
+        showNotification('Увійдіть щоб отримувати персональні рекомендації', 'warning');
+        return;
+    }
+    
+    console.log('✨ Getting personalized recommendations');
+    showLoading(true);
+    
+    try {
+        const response = await fetch(`/Recommendation/GetPersonalizedRecommendations?userId=${currentUserId}&limit=20`);
+        const data = await response.json();
+        
+        if (data.success && data.data && data.data.length > 0) {
+            displayRecommendations(data.data);
+        } else {
+            showNotification('Поки що недостатньо даних для персональних рекомендацій. Послухайте більше музики!', 'info');
+        }
+    } catch (error) {
+        console.error('Recommendations error:', error);
+        showNotification('Помилка отримання рекомендацій', 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+function displayRecommendations(tracks) {
+    const welcomeMessage = document.getElementById('welcome-message');
+    const searchResults = document.getElementById('search-results');
+    const recommendationsSection = document.getElementById('recommendations-section');
+    const recommendationsTracks = document.getElementById('recommendations-tracks');
+    
+    welcomeMessage.style.display = 'none';
+    searchResults.style.display = 'none';
+    recommendationsSection.style.display = 'block';
+    
+    recommendationsTracks.innerHTML = tracks.map(track => createTrackElement(track)).join('');
+}
+
+async function showTrendingMusic() {
+    console.log('📈 Showing trending music');
+    showLoading(true);
+    
+    try {
+        // Search for popular tracks
+        await searchMusic('popular hits 2024');
+    } catch (error) {
+        console.error('Trending error:', error);
+        showNotification('Помилка отримання популярної музики', 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+async function loadUserStats() {
+    if (!currentUserId) return;
+    
+    try {
+        const response = await fetch(`/Recommendation/GetUserStats?userId=${currentUserId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const stats = data.data;
+            document.getElementById('stats-content').innerHTML = `
+                <div class="stat-item">
+                    <span class="stat-label">🎵 Прослухано</span>
+                    <span class="stat-value">${stats.totalInteractions || 0}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">❤️ Улюблених</span>
+                    <span class="stat-value">${stats.favoritesCount || 0}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">👍 Лайків</span>
+                    <span class="stat-value">${stats.likesCount || 0}</span>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Stats error:', error);
+    }
+}
+
+function showCurrentPlaying(title, artist) {
+    const playingBar = document.getElementById('current-playing');
+    document.getElementById('playing-title').textContent = title;
+    document.getElementById('playing-artist').textContent = artist;
+    playingBar.style.display = 'flex';
+    
+    // Setup controls
+    document.getElementById('play-pause-btn').onclick = function() {
+        if (audioPlayer) {
+            if (audioPlayer.paused) {
+                audioPlayer.play();
+                this.textContent = '⏸️';
+            } else {
+                audioPlayer.pause();
+                this.textContent = '▶️';
+            }
+        }
+    };
+    
+    document.getElementById('volume-control').oninput = function() {
+        if (audioPlayer) {
+            audioPlayer.volume = this.value / 100;
+        }
+    };
+    
+    document.getElementById('close-player').onclick = function() {
+        if (audioPlayer) {
+            audioPlayer.pause();
+            audioPlayer = null;
+        }
+        hideCurrentPlaying();
+    };
+}
+
+function hideCurrentPlaying() {
+    document.getElementById('current-playing').style.display = 'none';
+}
+
+function hideSearchResults() {
+    document.getElementById('search-results').style.display = 'none';
+    document.getElementById('welcome-message').style.display = 'block';
+}
+
+function showLoading(show) {
+    document.getElementById('loading').style.display = show ? 'block' : 'none';
+}
+
+function showNotification(message, type = 'info') {
+    // Create notification
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : type === 'warning' ? '#ffc107' : '#17a2b8'};
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 10000;
+        max-width: 300px;
+        font-size: 14px;
+    `;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+    
+    console.log(`[${type.toUpperCase()}] ${message}`);
+}
+</script>
+} 
+} 

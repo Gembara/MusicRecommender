@@ -1,0 +1,256 @@
+@model List<MusicRecommender.Models.Favorite>
+
+@{
+    ViewData["Title"] = "Улюблені";
+}
+
+<style>
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @@keyframes fadeOut {
+        from {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        to {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+    }
+
+    .favorites-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+        padding: 20px;
+    }
+
+    .favorite-item {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        animation: fadeIn 0.5s ease-out forwards;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .favorite-item:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .favorite-item-image {
+        width: 100%;
+        height: 200px;
+        background-size: cover;
+        background-position: center;
+        position: relative;
+    }
+
+    .favorite-item-info {
+        padding: 20px;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .favorite-item-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #333;
+    }
+
+    .favorite-item-artist {
+        color: #666;
+        font-size: 0.9rem;
+        margin-bottom: 16px;
+    }
+
+    .favorite-item-date {
+        color: #999;
+        font-size: 0.8rem;
+        margin-top: auto;
+    }
+
+    .favorite-item-actions {
+        display: flex;
+        gap: 10px;
+        padding: 15px 20px;
+        background: #f8f9fa;
+        border-top: 1px solid #eee;
+    }
+
+    .btn-action {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-play {
+        background: #1db954;
+        color: white;
+    }
+
+    .btn-play:hover {
+        background: #1ed760;
+    }
+
+    .btn-remove {
+        background: #dc3545;
+        color: white;
+    }
+
+    .btn-remove:hover {
+        background: #e4606d;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+    }
+
+    .empty-state-icon {
+        font-size: 3rem;
+        margin-bottom: 20px;
+        color: #ddd;
+    }
+</style>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center mb-4">
+            <h1 class="display-4 mb-3">❤️ Улюблені треки</h1>
+            <p class="lead text-muted">Ваша колекція улюблених треків</p>
+        </div>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="empty-state">
+            <div class="empty-state-icon">💔</div>
+            <h3>Поки що немає улюблених треків</h3>
+            <p class="text-muted">Додайте треки в улюблене під час пошуку</p>
+            <a href="@Url.Action("Index", "Home")" class="btn btn-primary mt-3">
+                🔍 Шукати музику
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="favorites-list">
+            @foreach (var favorite in Model)
+            {
+                <div class="favorite-item" data-track-id="@favorite.SpotifyTrackId">
+                    <div class="favorite-item-image" style="background-image: url('@favorite.ImageUrl')">
+                        <div class="play-button">
+                            <svg viewBox="0 0 24 24" width="24" height="24">
+                                <path fill="white" d="M8 5v14l11-7z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="favorite-item-info">
+                        <div>
+                            <div class="favorite-item-title">@favorite.Title</div>
+                            <div class="favorite-item-artist">@favorite.Artist</div>
+                        </div>
+                        <div class="favorite-item-date">
+                            Додано: @favorite.AddedToFavoritesAt.ToString("dd.MM.yyyy HH:mm")
+                        </div>
+                    </div>
+                    <div class="favorite-item-actions">
+                        <button class="btn-action btn-play" onclick="playTrack('@favorite.SpotifyTrackId')">
+                            <svg width="16" height="16" viewBox="0 0 16 16">
+                                <path fill="currentColor" d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                <path fill="currentColor" d="M6.271 5.055a.5.5 0 0 1 .52.038l3.5 2.5a.5.5 0 0 1 0 .814l-3.5 2.5A.5.5 0 0 1 6 10.5v-5a.5.5 0 0 1 .271-.445z"/>
+                            </svg>
+                            Слухати
+                        </button>
+                        <button class="btn-action btn-remove" onclick="removeFromFavorites('@favorite.SpotifyTrackId', this)">
+                            <svg width="16" height="16" viewBox="0 0 16 16">
+                                <path fill="currentColor" d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                <path fill="currentColor" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                            </svg>
+                            Видалити
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<div id="spotifyPlayer"></div>
+
+@section Scripts {
+    <script>
+        function playTrack(trackId) {
+            const trackElement = document.querySelector(`[data-track-id="${trackId}"]`);
+            const title = trackElement.querySelector('.favorite-item-title').textContent;
+            const artist = trackElement.querySelector('.favorite-item-artist').textContent;
+            const imageUrl = trackElement.querySelector('.favorite-item-image').style.backgroundImage
+                .replace(/^url\(['"](.+)['"]\)$/, '$1');
+
+            spotifyPlayer.playTrack(trackId, title, artist, imageUrl);
+        }
+
+        async function removeFromFavorites(trackId, button) {
+            try {
+                const response = await fetch(`/api/Favorites/${trackId}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to remove from favorites');
+                }
+
+                const result = await response.json();
+                showNotification(result.message, 'success');
+
+                // Видаляємо елемент зі сторінки
+                const favoriteItem = button.closest('.favorite-item');
+                favoriteItem.style.animation = 'fadeOut 0.3s ease-out forwards';
+                setTimeout(() => {
+                    favoriteItem.remove();
+                    
+                    // Перевіряємо чи залишились улюблені треки
+                    const favoritesList = document.querySelector('.favorites-list');
+                    if (!favoritesList.children.length) {
+                        location.reload(); // Оновлюємо сторінку, щоб показати empty state
+                    }
+                }, 300);
+            } catch (error) {
+                console.error('Error removing from favorites:', error);
+                showNotification('Помилка при видаленні з улюбленого', 'error');
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type === 'error' ? 'danger' : 'success'} position-fixed top-0 end-0 m-3`;
+            notification.style.zIndex = '9999';
+            notification.innerHTML = message;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
+    </script>
+} 

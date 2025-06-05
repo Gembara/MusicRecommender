@@ -1,0 +1,83 @@
+@model List<MusicRecommender.Models.Song>
+@{
+    ViewData["Title"] = ViewBag.ArtistName;
+}
+
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>🎵 @ViewBag.ArtistName</h2>
+        <a href="@Url.Action("Recommend", "Home", new { artistName = ViewBag.ArtistName })" 
+           class="btn btn-primary">
+            🎯 Отримати рекомендації
+        </a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            Пісні не знайдено. Спробуйте іншого виконавця.
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var song in Model)
+            {
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100 song-card">
+                        <div class="card-body">
+                            <h5 class="card-title text-truncate" title="@song.Title">@song.Title</h5>
+                            <p class="card-text text-muted">@song.Artist</p>
+                            @if (!string.IsNullOrEmpty(song.SpotifyTrackId))
+                            {
+                                <div class="spotify-player">
+                                    <iframe src="https://open.spotify.com/embed/track/@song.SpotifyTrackId" 
+                                            width="100%" 
+                                            height="80" 
+                                            frameborder="0" 
+                                            allow="encrypted-media"
+                                            class="border-0"></iframe>
+                                </div>
+            }
+                        </div>
+                    </div>
+                </div>
+    }
+        </div>
+    }
+</div>
+
+@section Styles {
+    <style>
+        .song-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .song-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .spotify-player {
+            margin-top: 1rem;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background-color: #1DB954;
+            border-color: #1DB954;
+        }
+
+        .btn-primary:hover {
+            background-color: #1ed760;
+            border-color: #1ed760;
+        }
+    </style>
+}

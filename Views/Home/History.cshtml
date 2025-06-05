@@ -1,0 +1,218 @@
+@model List<MusicRecommender.Models.Song>
+
+@{
+    ViewData["Title"] = "Історія прослуховування";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <h1 class="display-4 mb-4">🎵 Історія прослуховування</h1>
+            
+            <div id="historyList" class="history-list">
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var song in Model)
+                    {
+                        <div class="history-item" data-track-id="@song.SpotifyTrackId">
+                            <div class="history-item-image" style="background-image: url('@song.ImageUrl')">
+                                <div class="play-button">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M8 5v14l11-7z"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="history-item-info">
+                                <div class="history-item-title">@song.Title</div>
+                                <div class="history-item-artist">@song.Artist</div>
+                                <div class="history-item-time" data-timestamp="@song.ListenedAt?.ToString("O")">
+                                    @(song.ListenedAt.HasValue ? TimeAgo(song.ListenedAt.Value) : "")
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="empty-history">
+                        <div class="text-center my-5">
+                            <h3>Історія порожня</h3>
+                            <p class="text-muted">Почніть слухати музику, щоб побачити її тут</p>
+                            <a href="/" class="btn btn-primary mt-3">Знайти музику</a>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .history-list {
+            background: #fff;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.05);
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .history-item:hover {
+            background: #f8f9fa;
+            transform: translateY(-1px);
+        }
+
+        .history-item.playing {
+            background: #1db95420;
+            border-left: 4px solid #1db954;
+        }
+
+        .history-item-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            background-size: cover;
+            background-position: center;
+            margin-right: 16px;
+            position: relative;
+        }
+
+        .play-button {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 32px;
+            height: 32px;
+            background: #1db954;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: all 0.2s ease;
+        }
+
+        .history-item:hover .play-button {
+            opacity: 1;
+        }
+
+        .play-button svg {
+            width: 16px;
+            height: 16px;
+            fill: white;
+            margin-left: 2px;
+        }
+
+        .history-item-info {
+            flex: 1;
+        }
+
+        .history-item-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .history-item-artist {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+        }
+
+        .history-item-time {
+            color: #adb5bd;
+            font-size: 0.8rem;
+        }
+
+        .empty-history {
+            padding: 40px 20px;
+            text-align: center;
+            color: #6c757d;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const historyList = document.getElementById('historyList');
+            let currentlyPlaying = null;
+
+            // Оновлення відносного часу
+            function updateRelativeTimes() {
+                document.querySelectorAll('.history-item-time').forEach(timeElement => {
+                    const timestamp = timeElement.dataset.timestamp;
+                    if (timestamp) {
+                        const date = new Date(timestamp);
+                        timeElement.textContent = getRelativeTimeString(date);
+                    }
+                });
+            }
+
+            // Форматування відносного часу
+            function getRelativeTimeString(date) {
+                const now = new Date();
+                const diffInSeconds = Math.floor((now - date) / 1000);
+
+                if (diffInSeconds < 60) return 'щойно';
+                if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} хв тому`;
+                if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} год тому`;
+                if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} дн тому`;
+                return date.toLocaleDateString();
+            }
+
+            // Відтворення треку
+            function playTrack(trackId, element) {
+                if (currentlyPlaying) {
+                    currentlyPlaying.classList.remove('playing');
+                }
+
+                const title = element.querySelector('.history-item-title').textContent;
+                const artist = element.querySelector('.history-item-artist').textContent;
+                const imageUrl = element.querySelector('.history-item-image').style.backgroundImage
+                    .replace(/^url\(['"](.+)['"]\)$/, '$1');
+
+                spotifyPlayer.playTrack(trackId, title, artist, imageUrl);
+
+                currentlyPlaying = element;
+                element.classList.add('playing');
+            }
+
+            // Обробка кліків по історії
+            historyList.addEventListener('click', (e) => {
+                const historyItem = e.target.closest('.history-item');
+                if (historyItem) {
+                    const trackId = historyItem.dataset.trackId;
+                    playTrack(trackId, historyItem);
+                }
+            });
+
+            // Оновлення часу кожну хвилину
+            setInterval(updateRelativeTimes, 60000);
+            updateRelativeTimes();
+        });
+    </script>
+}
+
+@functions {
+    string TimeAgo(DateTime date)
+    {
+        var now = DateTime.UtcNow;
+        var diff = now - date;
+
+        if (diff.TotalSeconds < 60) return "щойно";
+        if (diff.TotalMinutes < 60) return $"{Math.Floor(diff.TotalMinutes)} хв тому";
+        if (diff.TotalHours < 24) return $"{Math.Floor(diff.TotalHours)} год тому";
+        if (diff.TotalDays < 30) return $"{Math.Floor(diff.TotalDays)} дн тому";
+        return date.ToString("dd.MM.yyyy");
+    }
+} 

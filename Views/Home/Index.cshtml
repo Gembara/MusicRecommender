@@ -1,0 +1,477 @@
+@{
+    ViewData["Title"] = "Головна";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/search.css" />
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center mb-4">
+            <h1 class="display-4 mb-3">🎵 Музичні рекомендації</h1>
+            <p class="lead text-muted">Знайдіть нову музику на основі ваших улюблених виконавців</p>
+        </div>
+        <div class="col-md-8">
+            <div class="search-wrapper">
+                <div class="search-container">
+                    <div class="search-input-wrapper">
+                        <span class="search-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/>
+                            </svg>
+                        </span>
+                        <input type="text" 
+                               class="search-input" 
+                               id="artistSearch" 
+                               placeholder="Знайти виконавця..."
+                               autocomplete="off">
+                        <span class="clear-search" id="clearSearch">✕</span>
+                    </div>
+                    <div id="searchResults" class="search-results"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Кнопка рекомендацій -->
+    <div class="row justify-content-center mt-4">
+        <div class="col-md-8 text-center">
+            <div class="recommendations-section">
+                <h4 class="mb-3">Або отримайте персональні рекомендації</h4>
+                <a href="@Url.Action("SimpleRecommendations", "Home")" class="btn btn-primary btn-lg">
+                    <svg width="20" height="20" viewBox="0 0 24 24" style="margin-right: 8px;">
+                        <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                    Рекомендації для мене
+                </a>
+                <p class="text-muted mt-2 small">На основі вашої історії прослуховувань</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="spotifyPlayer"></div>
+
+@section Scripts {
+    <script src="https://sdk.scdn.co/spotify-player.js"></script>
+<script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('artistSearch');
+            const searchResults = document.getElementById('searchResults');
+            const clearSearch = document.getElementById('clearSearch');
+            const spotifyPlayerContainer = document.getElementById('spotifyPlayer');
+            let selectedIndex = -1;
+            let searchTimeout = null;
+            let currentRequest = null;
+            let allItems = [];
+            let currentlyPlaying = null;
+
+            // Створення елемента результату пошуку
+            function createSearchItem(item) {
+                const div = document.createElement('div');
+                div.className = 'search-item';
+                if (item.type === 'track') {
+                    div.dataset.trackId = item.id;
+                }
+                
+                let icon, imageStyle;
+                if (item.type === 'artist') {
+                    icon = '👤';
+                    imageStyle = item.imageUrl ? `background-image: url('${item.imageUrl}')` : '';
+                } else if (item.type === 'track') {
+                    icon = '🎵';
+                    imageStyle = item.imageUrl ? `background-image: url('${item.imageUrl}')` : '';
+                }
+
+                const playButton = item.type === 'track' ? `
+                    <div class="play-button">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                    </div>
+                ` : '';
+                
+                div.innerHTML = `
+                    <div class="search-item-image ${imageStyle ? '' : item.type}" style="${imageStyle}">
+                        ${imageStyle ? '' : icon}
+                        ${playButton}
+                    </div>
+                    <div class="search-item-info">
+                        <div class="search-item-title">${item.name}</div>
+                        <div class="search-item-subtitle">
+                            ${item.type === 'track' ? item.artistName : 'Виконавець'}
+                        </div>
+                    </div>
+                    ${item.type === 'track' ? `
+                        <div class="search-item-actions">
+                            <button class="favorite-btn" data-track-id="${item.id}" title="Додати в улюблені">
+                                <i class="far fa-heart"></i>
+                            </button>
+                        </div>
+                    ` : ''}
+                `;
+                
+                if (item.type === 'track') {
+                    const favoriteButton = div.querySelector('.favorite-btn');
+                    
+                    favoriteButton.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        
+                        // Додаємо анімацію натискання
+                        favoriteButton.classList.add('animating');
+                        setTimeout(() => {
+                            favoriteButton.classList.remove('animating');
+                        }, 600);
+                        
+                        // Простіше рішення - перевіряємо авторизацію інлайн
+                        try {
+                            const authResponse = await fetch('/api/Auth/current');
+                            const authData = await authResponse.json();
+                            
+                            if (!authData.isLoggedIn) {
+                                showNotificationSimple('Спочатку увійдіть в систему', 'error');
+                                return;
+                            }
+                        } catch (error) {
+                            showNotificationSimple('Помилка перевірки авторизації', 'error');
+                            return;
+                        }
+                        
+                        // Визначаємо чи трек вже в улюблених
+                        const icon = favoriteButton.querySelector('i');
+                        const isCurrentlyFavorite = icon.classList.contains('fas');
+                        
+                        if (isCurrentlyFavorite) {
+                            // Видаляємо з улюблених
+                            try {
+                                const response = await fetch(`/api/Favorites/remove/${item.id}`, {
+                                    method: 'DELETE'
+                                });
+                                
+                                if (response.ok) {
+                                    icon.className = 'far fa-heart';
+                                    favoriteButton.title = 'Додати в улюблені';
+                                    showNotificationSimple('Видалено з улюблених', 'success');
+                                } else {
+                                    showNotificationSimple('Помилка при видаленні', 'error');
+                                }
+                            } catch (error) {
+                                showNotificationSimple('Помилка при видаленні', 'error');
+                            }
+                        } else {
+                            // Додаємо в улюблені
+                            try {
+                                const response = await fetch('/api/Favorites/add', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        spotifyTrackId: item.id,
+                                        title: item.name,
+                                        artist: item.artistName,
+                                        imageUrl: item.imageUrl
+                                    })
+                                });
+                                
+                                if (response.ok) {
+                                    icon.className = 'fas fa-heart';
+                                    favoriteButton.title = 'Видалити з улюблених';
+                                    showNotificationSimple('Додано в улюблені!', 'success');
+                                } else {
+                                    showNotificationSimple('Помилка при додаванні', 'error');
+                                }
+                            } catch (error) {
+                                showNotificationSimple('Помилка при додаванні', 'error');
+                            }
+                        }
+                    });
+                }
+                
+                div.addEventListener('mouseover', () => {
+                    selectItem(allItems.indexOf(div));
+                });
+                
+                return div;
+            }
+
+            // Відтворення треку через Spotify
+            function playSpotifyTrack(trackId, element) {
+                if (currentlyPlaying) {
+                    currentlyPlaying.classList.remove('playing');
+                }
+
+                // Зберігаємо в історію
+                const title = element.querySelector('.search-item-title').textContent;
+                const artist = element.querySelector('.search-item-subtitle').textContent;
+                const imageUrl = element.querySelector('.search-item-image').style.backgroundImage
+                    .replace(/^url\(['"](.+)['"]\)$/, '$1');
+
+                const songData = {
+                    title: title,
+                    artist: artist,
+                    spotifyTrackId: trackId,
+                    imageUrl: imageUrl,
+                    listenedAt: new Date().toISOString()
+                };
+
+                // Зберігаємо в історію
+                fetch('/api/History/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(songData)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            throw new Error(`Failed to save to history: ${text}`);
+                    });
+                    }
+                    console.log('Successfully saved to history');
+                })
+                .catch(error => {
+                    console.error('Error saving to history:', error);
+                    showNotification('Помилка при збереженні в історію', 'error');
+                });
+
+                // Відтворюємо трек
+                spotifyPlayer.playTrack(trackId, title, artist, imageUrl);
+
+                currentlyPlaying = element;
+                element.classList.add('playing');
+            }
+
+            // Отримання результатів пошуку
+            async function fetchResults(query) {
+                if (currentRequest) {
+                    currentRequest.abort();
+                }
+
+                try {
+                    const controller = new AbortController();
+                    currentRequest = controller;
+
+                    const response = await fetch(`/Home/Autocomplete?q=${encodeURIComponent(query)}`, {
+                        signal: controller.signal
+                    });
+
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return await response.json();
+                } catch (error) {
+                    if (error.name === 'AbortError') return null;
+                    throw error;
+                } finally {
+                    currentRequest = null;
+                }
+            }
+
+            // Відображення результатів
+            function displayResults(results) {
+                searchResults.innerHTML = '';
+                allItems = [];
+                
+                if (!results || (!results.artists.length && !results.songs.length)) {
+                    searchResults.innerHTML = '<div class="no-results">Нічого не знайдено</div>';
+                    searchResults.style.display = 'block';
+                    return;
+                }
+
+                // Показуємо артистів
+                if (results.artists.length > 0) {
+                    const artistsSection = document.createElement('div');
+                    artistsSection.className = 'search-section';
+                    artistsSection.innerHTML = '<h3>Виконавці</h3>';
+                    results.artists.forEach(artist => {
+                        const div = createSearchItem(artist);
+                        div.addEventListener('click', async () => {
+                            try {
+                                const response = await fetch(`/Home/GetArtistTracks?artistId=${artist.id}`);
+                                if (!response.ok) {
+                                    throw new Error('Failed to fetch artist tracks');
+                                }
+                                const tracks = await response.json();
+                                displayResults({ artists: [], songs: tracks });
+                            } catch (error) {
+                                console.error('Error fetching artist tracks:', error);
+                                showNotification('Помилка при завантаженні треків артиста', 'error');
+                            }
+                        });
+                        artistsSection.appendChild(div);
+                        allItems.push(div);
+                    });
+                    searchResults.appendChild(artistsSection);
+                }
+
+                // Показуємо пісні
+                if (results.songs.length > 0) {
+                    const songsSection = document.createElement('div');
+                    songsSection.className = 'search-section';
+                    songsSection.innerHTML = '<h3>Пісні</h3>';
+                    results.songs.forEach(song => {
+                        const div = createSearchItem(song);
+                        div.addEventListener('click', () => {
+                            playSpotifyTrack(song.id, div);
+                        });
+                        songsSection.appendChild(div);
+                        allItems.push(div);
+                    });
+                    searchResults.appendChild(songsSection);
+                    
+                    // Перевіряємо статус улюблених для всіх треків
+                    checkAndUpdateFavoriteStatus();
+                }
+                
+                searchResults.style.display = 'block';
+            }
+
+            // Перевірка статусу улюблених для всіх треків
+            async function checkAndUpdateFavoriteStatus() {
+                try {
+                    const authResponse = await fetch('/api/Auth/current');
+                    const authData = await authResponse.json();
+                    
+                    if (!authData.isLoggedIn) return;
+                    
+                    const favoriteButtons = document.querySelectorAll('.favorite-btn');
+                    
+                    for (const button of favoriteButtons) {
+                        const trackId = button.getAttribute('data-track-id');
+                        if (trackId) {
+                            try {
+                                const response = await fetch(`/api/Favorites/check/${trackId}`);
+                                const data = await response.json();
+                                
+                                if (response.ok && data.isFavorite) {
+                                    const icon = button.querySelector('i');
+                                    icon.className = 'fas fa-heart';
+                                    button.title = 'Видалити з улюблених';
+                                }
+                            } catch (error) {
+                                console.log('Помилка перевірки статусу улюбленого:', error);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.log('Помилка перевірки авторизації:', error);
+                }
+            }
+
+            // Виділення елемента
+            function selectItem(index) {
+                allItems.forEach(item => item.classList.remove('selected'));
+                selectedIndex = index;
+                
+                if (selectedIndex >= 0 && selectedIndex < allItems.length) {
+                    allItems[selectedIndex].classList.add('selected');
+                    allItems[selectedIndex].scrollIntoView({ block: 'nearest' });
+                }
+            }
+
+            // Обробник введення тексту
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.trim();
+                clearSearch.style.display = query.length > 0 ? 'block' : 'none';
+                
+                clearTimeout(searchTimeout);
+                
+                if (query.length === 0) {
+                    searchResults.style.display = 'none';
+                    return;
+                }
+
+                searchTimeout = setTimeout(async () => {
+                    try {
+                        const results = await fetchResults(query);
+                        if (results) displayResults(results);
+                    } catch (error) {
+                        console.error('Search error:', error);
+                        searchResults.innerHTML = '<div class="error-message">Помилка при пошуку</div>';
+                        searchResults.style.display = 'block';
+                    }
+                }, 150);
+            });
+
+            // Очищення пошуку
+            clearSearch.addEventListener('click', () => {
+                searchInput.value = '';
+                clearSearch.style.display = 'none';
+                searchResults.style.display = 'none';
+                searchInput.focus();
+            });
+
+            // Обробник клавіатури
+            searchInput.addEventListener('keydown', (e) => {
+                switch(e.key) {
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        selectItem(selectedIndex < allItems.length - 1 ? selectedIndex + 1 : 0);
+                        break;
+                        
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        selectItem(selectedIndex > 0 ? selectedIndex - 1 : allItems.length - 1);
+                        break;
+                        
+                    case 'Enter':
+                        e.preventDefault();
+                        if (selectedIndex >= 0 && selectedIndex < allItems.length) {
+                            allItems[selectedIndex].click();
+                        }
+                        break;
+                        
+                    case 'Escape':
+                        if (currentlyPlaying) {
+                            currentlyPlaying.classList.remove('playing');
+                            currentlyPlaying = null;
+                        } else {
+                            searchInput.value = '';
+                            clearSearch.style.display = 'none';
+                            searchResults.style.display = 'none';
+                        }
+                        break;
+                }
+            });
+
+            // Закриття результатів при кліку поза пошуком
+            document.addEventListener('click', (e) => {
+                if (!searchInput.contains(e.target) && 
+                    !searchResults.contains(e.target) && 
+                    !clearSearch.contains(e.target)) {
+                    searchResults.style.display = 'none';
+                }
+            });
+
+            // Фокус на поле пошуку при завантаженні
+            searchInput.focus();
+
+            // Проста функція для показу повідомлень
+            function showNotificationSimple(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.className = `alert alert-${type === 'error' ? 'danger' : 'success'} position-fixed`;
+                notification.style.cssText = `
+                    top: 20px;
+                    right: 20px;
+                    z-index: 9999;
+                    min-width: 300px;
+                    animation: slideInRight 0.3s ease-out;
+                `;
+                notification.innerHTML = `
+                    ${message}
+                    <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+                `;
+                document.body.appendChild(notification);
+                
+                // Автоматично видалити через 3 секунди
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.remove();
+                    }
+                }, 3000);
+            }
+    });
+</script>
+}
