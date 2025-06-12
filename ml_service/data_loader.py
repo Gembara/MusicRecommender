@@ -74,7 +74,7 @@ class DataLoader:
                         1 as IsLiked,
                         0 as IsSkipped,
                         0 as IsRepeat,
-                        CreatedAt as InteractionTime
+                        AddedToFavoritesAt as InteractionTime
                     FROM Favorites
                     """
                     df_favorites = pd.read_sql_query(query_favorites, conn)
@@ -150,6 +150,19 @@ class DataLoader:
         try:
             with self.connect_db() as conn:
                 df = pd.read_sql_query(query, conn)
+                
+                # Очищення даних від спецсимволів
+                if not df.empty:
+                    df['Title'] = df['Title'].astype(str).str.replace('\n', '').str.strip()
+                    df['Artist'] = df['Artist'].astype(str).str.replace('\n', '').str.strip()
+                    df['Genre'] = df['Genre'].astype(str).str.replace('\n', '').str.strip()
+                    
+                    # Видаляємо порожні записи
+                    df = df[df['Title'] != '']
+                    df = df[df['Artist'] != '']
+                    df = df[df['Title'] != 'nan']
+                    df = df[df['Artist'] != 'nan']
+                
                 logger.info(f"Завантажено {len(df)} аудіо фічей")
                 return df
         except Exception as e:
@@ -176,6 +189,19 @@ class DataLoader:
         try:
             with self.connect_db() as conn:
                 df = pd.read_sql_query(query, conn)
+                
+                # Очищення даних від спецсимволів
+                if not df.empty:
+                    df['Title'] = df['Title'].astype(str).str.replace('\n', '').str.strip()
+                    df['Artist'] = df['Artist'].astype(str).str.replace('\n', '').str.strip()
+                    df['Genre'] = df['Genre'].astype(str).str.replace('\n', '').str.strip()
+                    
+                    # Видаляємо порожні записи
+                    df = df[df['Title'] != '']
+                    df = df[df['Artist'] != '']
+                    df = df[df['Title'] != 'nan']
+                    df = df[df['Artist'] != 'nan']
+                
                 logger.info(f"Завантажено {len(df)} записів історії")
                 return df
         except Exception as e:
